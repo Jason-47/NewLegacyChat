@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salesforce Settings UI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #loginBtn {
+            background-color: #0070d2;
+            color: white;
+        }
+        #legacyChat, #miawChat {
+            display: none;
+            background-color: #04844b;
+            color: white;
+        }
+        .error {
+            color: #c23934;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button id="loginBtn">Login with Salesforce</button>
+        <button id="legacyChat">Legacy Chat</button>
+        <button id="miawChat">MIAW Chat</button>
+        <div id="error" class="error"></div>
+        
+        <!-- Hidden elements for LiveAgent -->
+        <div id="liveagent_button_online_5734y0000008PTF" style="display: none;"></div>
+        <div id="liveagent_button_offline_5734y0000008PTF" style="display: none;"></div>
+    </div>
+
+    <!-- LiveAgent deployment script -->
+    <script type="text/javascript" src="https://c.la3-c1-ia4.salesforceliveagent.com/content/g/js/55.0/deployment.js"></script>
+
+    <script>
+        // Configuration object
+        const CONFIG = {
+            CLIENT_ID: '3MVG9SHFu79R42RR04Yt5fB5mocrKgSrjsFwsIlrVzFh9co4ulBSufJOqGZAPNnZs67z28GRqcDuHNHavdZUJ',
+            REDIRECT_URI: 'https://jason-47.github.io/BOT',
+            AUTH_URL: 'https://tricore--dev.sandbox.my.salesforce.com/services/oauth2/authorize',
+            TOKEN_URL: 'https://tricore--dev.sandbox.my.salesforce.com/services/oauth2/token',
+            API_URL: '/services/apexrest/settings'
+        };
+
+        // Create a promise to track LiveAgent initialization
+        window.liveAgentInitialized = new Promise((resolve) => {
+            window.liveAgentReady = resolve;
+        });
+
+        // Initialize LiveAgent queue
+        if (!window._laq) { 
+            window._laq = []; 
+        }
+
+        // Function to initialize LiveAgent
+        function initializeLiveAgent() {
+            console.log('Initializing LiveAgent...');
+            
+            // Initialize LiveAgent with a callback
+            liveagent.init('https://d.la3-c1-ia4.salesforceliveagent.com/chat', '572330000004CuZ', '00D40000000N3ML', true,{
+                onInit: function() {
+                    console.log('LiveAgent initialized successfully');
+                    window.liveAgentReady(); // Resolve the promise when initialization is complete
+                }
+            });
+            
+            window._laq.push(function() {
+                liveagent.showWhenOnline('5734y0000008PTF', document.getElementById('liveagent_button_online_5734y0000008PTF'));
+                liveagent.showWhenOffline('5734y0000008PTF', document.getElementById('liveagent_button_offline_5734y0000008PTF'));
+            });
+        }
+
+        // Function to start LiveAgent chat
+        async function startLiveAgentChat() {
+            try {
+                console.log('Waiting for LiveAgent initialization...');
+                await window.liveAgentInitialized;
+                console.log('LiveAgent is ready, starting chat...');
+                liveagent.startChat('5734y0000008PTF');
+            } catch (error) {
+                console.error('Error starting LiveAgent chat:', error);
+                showError('Unable to start chat. Please try again.');
+            }
+        }
+
+        // Function to generate random state
+        function generateState() {
+            return Math.random().toString(36).substring(2, 15);
+        }
+
+        // Function to initialize OAuth flow
+        function initializeOAuth() {
+            const state = generateState();
+            sessionStorage.setItem('oauth_state', state);
+
+            const authUrl = new URL(CONFIG.AUTH_URL);
+            authUrl.searchParams.append('response_type', 'token');
+            authUrl.searchParams.append('client_id', CONFIG.CLIENT_ID);
+            authUrl.searchParams.append('redirect_uri', CONFIG.REDIRECT_URI);
+            authUrl.searchParams.append('state', state);
+
+            console.log('Initiating OAuth flow with URL:', authUrl.toString());
+            window.location.href = authUrl.toString();
+        }
+
+        // Function to handle OAuth callback
+        function handleCallback() {
+            console.log('Handling OAuth callback');
+            const hash = window.location.hash.substring(1);
+            const params = new URLSearchParams(hash);
+            
+            const accessToken = params.get('access_token');
+            const instanceUrl = params.get('instance_url');
+            const state = params.get('state');
+            
+            const savedState = sessionStorage.getItem('oauth_state');
+
+            if (state !== savedState) {
+                showError('Invalid state parameter');
+                return;
+            }
+
+            if (accessToken && instanceUrl) {
+                console.log('Received access token and instance URL');
+                sessionStorage.setItem('access_token', accessToken);
+                sessionStorage.setItem('instance_url', instanceUrl);
+                fetchCustomSetting();
+            } else {
+                showError('Authentication failed');
+            }
+        }
+
+        // Function to fetch custom setting
+        async function fetchCustomSetting() {
+            try {
+                const accessToken = sessionStorage.getItem('access_token');
+                const instanceUrl = sessionStorage.getItem('instance_url');
+
+                if (!accessToken || !instanceUrl) {
+                    throw new Error('Not authenticated');
+                }
+
+                console.log('Fetching custom setting from:', `${instanceUrl}${CONFIG.API_URL}`);
+                
+                const response = await fetch(`${instanceUrl}${CONFIG.API_URL}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch custom setting: ${response.status}`);
+                }
+
+                const settingText = await response.text();
+                console.log('Raw setting value:', settingText);
+
+                // Remove quotes and whitespace, then compare
+                const cleanValue = settingText.replace(/['"]/g, '').trim();
+                const enableMIAW = cleanValue === 'true';
+                console.log('Enable MIAW:', enableMIAW);
+                
+                updateUI(enableMIAW);
+
+            } catch (error) {
+                console.error('Error fetching custom setting:', error);
+                showError(error.message);
+                updateUI(false);
+            }
+        }
+
+        // Function to initialize embedded messaging
+        function initEmbeddedMessaging() {
+            try {
+                embeddedservice_bootstrap.settings.language = 'en_US';
+
+                embeddedservice_bootstrap.init(
+                    '00DDQ0000008icf',
+                    'AIChatBot',
+                    'https://tricore--dev.sandbox.my.site.com/ESWAIChatBot1726132255017',
+                    {
+                        scrt2URL: 'https://tricore--dev.sandbox.my.salesforce-scrt.com'
+                    }
+                );
+            } catch (err) {
+                console.error('Error loading Embedded Messaging: ', err);
+            }
+        }
+
+        // Function to load MIAW script
+        function loadMIAWScript() {
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = 'https://tricore--dev.sandbox.my.site.com/ESWAIChatBot1726132255017/assets/js/bootstrap.min.js';
+            script.onload = initEmbeddedMessaging;
+            document.body.appendChild(script);
+        }
+
+        // Function to update UI based on setting
+        function updateUI(enableMIAW) {
+            console.log('Updating UI, enableMIAW:', enableMIAW);
+            
+            const loginBtn = document.getElementById('loginBtn');
+            const legacyChat = document.getElementById('legacyChat');
+            const miawChat = document.getElementById('miawChat');
+
+            // Hide login button
+            loginBtn.style.display = 'none';
+
+            // Show appropriate chat button based on enableMIAW value
+            if (enableMIAW) {
+                miawChat.style.display = 'inline-block';
+                legacyChat.style.display = 'none';
+                console.log('Showing MIAW chat button');
+            } else {
+                legacyChat.style.display = 'inline-block';
+                miawChat.style.display = 'none';
+                console.log('Showing Legacy chat button');
+            }
+        }
+
+        // Function to show error messages
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            console.error('Error:', message);
+        }
+
+        // Initialize event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize LiveAgent
+            initializeLiveAgent();
+
+            // Add click listener for login button
+            document.getElementById('loginBtn').addEventListener('click', initializeOAuth);
+
+            // Add click listeners for chat buttons
+            document.getElementById('legacyChat').addEventListener('click', () => {
+                console.log('Legacy Chat clicked');
+                startLiveAgentChat();
+            });
+
+            document.getElementById('miawChat').addEventListener('click', () => {
+                console.log('MIAW Chat clicked');
+                loadMIAWScript();
+            });
+
+            // Check if we're returning from OAuth
+            if (window.location.hash) {
+                handleCallback();
+            }
+        });
+
+        // Check for session tokens and fetch setting if they exist
+        if (sessionStorage.getItem('access_token') && sessionStorage.getItem('instance_url')) {
+            fetchCustomSetting();
+        }
+    </script>
+</body>
+</html>
