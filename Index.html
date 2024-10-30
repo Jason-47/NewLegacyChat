@@ -33,7 +33,7 @@
             background-color: #0070d2;
             color: white;
         }
-        #legacyChat, #miawChat {
+        #legacyChat {
             display: none;
             background-color: #04844b;
             color: white;
@@ -48,7 +48,6 @@
     <div class="container">
         <button id="loginBtn">Login with Salesforce</button>
         <button id="legacyChat">Legacy Chat</button>
-        <button id="miawChat">MIAW Chat</button>
         <div id="error" class="error"></div>
         
         <!-- Hidden elements for LiveAgent -->
@@ -84,7 +83,7 @@
             console.log('Initializing LiveAgent...');
             
             // Initialize LiveAgent with a callback
-            liveagent.init('https://d.la3-c1-ia4.salesforceliveagent.com/chat', '572330000004CuZ', '00D40000000N3ML', true,{
+            liveagent.init('https://d.la3-c1-ia4.salesforceliveagent.com/chat', '572330000004CuZ', '00D40000000N3ML', true, {
                 onInit: function() {
                     console.log('LiveAgent initialized successfully');
                     window.liveAgentReady(); // Resolve the promise when initialization is complete
@@ -184,68 +183,26 @@
                 const settingText = await response.text();
                 console.log('Raw setting value:', settingText);
 
-                // Remove quotes and whitespace, then compare
-                const cleanValue = settingText.replace(/['"]/g, '').trim();
-                const enableMIAW = cleanValue === 'true';
-                console.log('Enable MIAW:', enableMIAW);
-                
-                updateUI(enableMIAW);
+                updateUI();
 
             } catch (error) {
                 console.error('Error fetching custom setting:', error);
                 showError(error.message);
-                updateUI(false);
+                updateUI();
             }
         }
 
-        // Function to initialize embedded messaging
-        function initEmbeddedMessaging() {
-            try {
-                embeddedservice_bootstrap.settings.language = 'en_US';
+        // Function to update UI
+        function updateUI() {
+            console.log('Updating UI');
 
-                embeddedservice_bootstrap.init(
-                    '00DDQ0000008icf',
-                    'AIChatBot',
-                    'https://tricore--dev.sandbox.my.site.com/ESWAIChatBot1726132255017',
-                    {
-                        scrt2URL: 'https://tricore--dev.sandbox.my.salesforce-scrt.com'
-                    }
-                );
-            } catch (err) {
-                console.error('Error loading Embedded Messaging: ', err);
-            }
-        }
-
-        // Function to load MIAW script
-        function loadMIAWScript() {
-            const script = document.createElement('script');
-            script.type = 'text/javascript';
-            script.src = 'https://tricore--dev.sandbox.my.site.com/ESWAIChatBot1726132255017/assets/js/bootstrap.min.js';
-            script.onload = initEmbeddedMessaging;
-            document.body.appendChild(script);
-        }
-
-        // Function to update UI based on setting
-        function updateUI(enableMIAW) {
-            console.log('Updating UI, enableMIAW:', enableMIAW);
-            
             const loginBtn = document.getElementById('loginBtn');
             const legacyChat = document.getElementById('legacyChat');
-            const miawChat = document.getElementById('miawChat');
 
-            // Hide login button
+            // Hide login button and show Legacy Chat button
             loginBtn.style.display = 'none';
-
-            // Show appropriate chat button based on enableMIAW value
-            if (enableMIAW) {
-                miawChat.style.display = 'inline-block';
-                legacyChat.style.display = 'none';
-                console.log('Showing MIAW chat button');
-            } else {
-                legacyChat.style.display = 'inline-block';
-                miawChat.style.display = 'none';
-                console.log('Showing Legacy chat button');
-            }
+            legacyChat.style.display = 'inline-block';
+            console.log('Showing Legacy chat button');
         }
 
         // Function to show error messages
@@ -263,15 +220,10 @@
             // Add click listener for login button
             document.getElementById('loginBtn').addEventListener('click', initializeOAuth);
 
-            // Add click listeners for chat buttons
+            // Add click listener for Legacy Chat button
             document.getElementById('legacyChat').addEventListener('click', () => {
                 console.log('Legacy Chat clicked');
                 startLiveAgentChat();
-            });
-
-            document.getElementById('miawChat').addEventListener('click', () => {
-                console.log('MIAW Chat clicked');
-                loadMIAWScript();
             });
 
             // Check if we're returning from OAuth
